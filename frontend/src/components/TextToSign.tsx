@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Send, Mic, MicOff, Hand, Volume2, Loader2 } from 'lucide-react';
+import { MessageSquare, Send, Mic, MicOff, Hand, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -20,11 +20,19 @@ const TextToSign = ({ onTranslate, isTranslating, currentSignDisplay }: TextToSi
     }
   };
 
+  const getISLImage = (char: string) => {
+    const upper = char.toUpperCase();
+    if (/[A-Z0-9]/.test(upper)) {
+      return `/isl/${upper}.jpg`;
+    }
+    return null;
+  };
+
   const toggleSpeechRecognition = () => {
     if (!isListening) {
-      // Check for speech recognition support
       if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
+        const SpeechRecognition =
+          (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
         const recognition = new SpeechRecognition();
         recognition.continuous = false;
         recognition.interimResults = true;
@@ -47,21 +55,9 @@ const TextToSign = ({ onTranslate, isTranslating, currentSignDisplay }: TextToSi
     }
   };
 
-  // Alphabet to simple hand representation
-  const getHandEmoji = (letter: string): string => {
-    const handSigns: Record<string, string> = {
-      'A': '✊', 'B': '🤚', 'C': '🤏', 'D': '☝️', 'E': '✊',
-      'F': '🤌', 'G': '🤙', 'H': '🤟', 'I': '🤙', 'J': '🤙',
-      'K': '✌️', 'L': '🤟', 'M': '🤜', 'N': '🤜', 'O': '👌',
-      'P': '👇', 'Q': '👇', 'R': '🤞', 'S': '✊', 'T': '✊',
-      'U': '🤞', 'V': '✌️', 'W': '🤟', 'X': '🤙', 'Y': '🤙',
-      'Z': '☝️', ' ': '  '
-    };
-    return handSigns[letter.toUpperCase()] || '🤚';
-  };
-
   return (
     <div className="glass-panel-strong p-6 h-full flex flex-col">
+      {/* Header */}
       <div className="flex items-center gap-3 mb-6">
         <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center">
           <MessageSquare className="w-5 h-5 text-accent" />
@@ -87,10 +83,15 @@ const TextToSign = ({ onTranslate, isTranslating, currentSignDisplay }: TextToSi
             size="icon"
             variant="ghost"
             onClick={toggleSpeechRecognition}
-            className={isListening ? 'text-destructive animate-pulse-soft' : 'text-muted-foreground'}
+            className={
+              isListening
+                ? 'text-destructive animate-pulse-soft'
+                : 'text-muted-foreground'
+            }
           >
             {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
           </Button>
+
           <Button
             size="icon"
             onClick={handleSubmit}
@@ -111,6 +112,7 @@ const TextToSign = ({ onTranslate, isTranslating, currentSignDisplay }: TextToSi
         <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
           Sign Output
         </p>
+
         <div className="h-full min-h-[150px] rounded-xl bg-secondary/50 p-4 flex items-center justify-center overflow-hidden">
           <AnimatePresence mode="wait">
             {currentSignDisplay ? (
@@ -121,26 +123,35 @@ const TextToSign = ({ onTranslate, isTranslating, currentSignDisplay }: TextToSi
                 exit={{ opacity: 0, scale: 0.8 }}
                 className="text-center"
               >
-                <div className="flex flex-wrap justify-center gap-2 mb-4">
-                  {currentSignDisplay.split('').map((char, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="flex flex-col items-center"
-                    >
-                      <span className="text-4xl mb-1">{getHandEmoji(char)}</span>
-                      <span className="text-xs text-muted-foreground uppercase font-medium">
-                        {char === ' ' ? '␣' : char}
-                      </span>
-                    </motion.div>
-                  ))}
+                <div className="flex flex-wrap justify-center gap-3 mb-4">
+                  {currentSignDisplay.split('').map((char, index) => {
+                    if (char === ' ') {
+                      return <div key={index} className="w-8" />;
+                    }
+
+                    return (
+                      <motion.div
+                        key={index}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="flex flex-col items-center"
+                      >
+                        {getISLImage(char) && (
+                          <img
+                            src={getISLImage(char)!}
+                            alt={`ISL ${char}`}
+                            className="w-16 h-16 object-contain mb-1 rounded-md shadow-sm"
+                          />
+                        )}
+
+                        <span className="text-xs text-muted-foreground uppercase font-medium">
+                          {char}
+                        </span>
+                      </motion.div>
+                    );
+                  })}
                 </div>
-                <Button variant="ghost" size="sm" className="text-muted-foreground">
-                  <Volume2 className="w-4 h-4 mr-2" />
-                  Play Animation
-                </Button>
               </motion.div>
             ) : (
               <motion.div

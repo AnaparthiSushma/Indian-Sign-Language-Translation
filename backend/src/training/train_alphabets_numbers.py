@@ -7,9 +7,10 @@ from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.utils import to_categorical
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
 # ================= CONFIG =================
-CSV_PATH = "data/landmarks/alphabet_number_landmarks_2hand.csv"
+CSV_PATH = "../../data/landmarks/alphabet_number_landmarks_2hand.csv"
 MODEL_PATH = "models/alphabet_number_model.h5"
 LABEL_MAP_PATH = "models/label_map.json"
 
@@ -80,3 +81,19 @@ model.save(MODEL_PATH)
 loss, acc = model.evaluate(X_test, y_test)
 print(f"\n✅ Training completed successfully")
 print(f"🎯 Validation Accuracy: {acc * 100:.2f}%")
+# ================= EVALUATION =================
+y_true = np.argmax(y_test, axis=1)
+y_pred = np.argmax(model.predict(X_test), axis=1)
+
+print("\n📊 Classification Report (Alphabet/Number Model):")
+print(classification_report(
+    y_true,
+    y_pred,
+    target_names=label_encoder.classes_
+))
+
+print("🧩 Confusion Matrix:")
+print(confusion_matrix(y_true, y_pred))
+
+acc = accuracy_score(y_true, y_pred)
+print(f"🎯 Final Test Accuracy: {acc * 100:.2f}%")

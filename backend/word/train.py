@@ -6,6 +6,7 @@ from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.utils import to_categorical
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
 # ================= CONFIG =================
 DATA_DIR = "data/word_sequences"
@@ -97,3 +98,19 @@ model.save(MODEL_PATH)
 loss, acc = model.evaluate(X_test, y_test)
 print("\n✅ Word training done")
 print(f"🎯 Validation Accuracy: {acc*100:.2f}%")
+# ================= EVALUATION =================
+y_true = np.argmax(y_test, axis=1)
+y_pred = np.argmax(model.predict(X_test), axis=1)
+
+print("\n📊 Classification Report (Word Model):")
+print(classification_report(
+    y_true,
+    y_pred,
+    target_names=le.classes_
+))
+
+print("🧩 Confusion Matrix:")
+print(confusion_matrix(y_true, y_pred))
+
+acc = accuracy_score(y_true, y_pred)
+print(f"🎯 Final Test Accuracy: {acc * 100:.2f}%")
