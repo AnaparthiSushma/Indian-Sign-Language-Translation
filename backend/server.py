@@ -3,7 +3,8 @@ from pydantic import BaseModel
 from inference import predict_landmarks
 from word.word_inference import predict_word   # 🔥 ADD THIS
 from fastapi.middleware.cors import CORSMiddleware
-
+from pydantic import BaseModel
+from googletrans import Translator
 app = FastAPI()
 
 app.add_middleware(
@@ -14,6 +15,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+translator = Translator()
+
+class TranslateRequest(BaseModel):
+    text: str
+    source: str
+    target: str
+
+@app.post("/translate")
+async def translate_text(req: TranslateRequest):
+    translated = translator.translate(
+        req.text,
+        src=req.source,
+        dest=req.target
+    )
+    return {"translated_text": translated.text}
 class Input(BaseModel):
     landmarks: list[float]
 

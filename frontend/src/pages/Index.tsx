@@ -101,6 +101,14 @@ const Index = () => {
             ? prev + (prev ? " " : "") + result.label
             : prev + result.label
         );
+const entry: HistoryEntry = {
+  id: Date.now().toString(),
+  text: result.label,
+  timestamp: new Date(),
+  mode: 'sign-to-text'
+};
+
+setHistory(prev => [entry, ...prev].slice(0, 50));
 
         setStats(prev => ({
           ...prev,

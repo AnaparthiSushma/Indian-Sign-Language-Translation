@@ -70,6 +70,14 @@ const Word = () => {
   if (lastWord === result.label) return prev;
   return prev + " " + result.label;
 });
+const entry: HistoryEntry = {
+  id: Date.now().toString(),
+  text: result.label,
+  timestamp: new Date(),
+  mode: 'sign-to-text'
+};
+
+setHistory(prev => [entry, ...prev].slice(0, 50));
 
 
         setStats(prev => ({
@@ -84,6 +92,15 @@ const Word = () => {
     },
     [isCameraActive]
   );
+const clearAll = useCallback(() => {
+  setTranslatedText("");
+  setCurrentPrediction(null);
+  setStats(prev => ({
+    ...prev,
+    signsDetected: 0,
+    wordsTranslated: 0
+  }));
+}, []);
 
   const handleTextToSign = useCallback((text: string) => {
     setIsTranslating(true);
@@ -154,23 +171,31 @@ const Word = () => {
             transition={{ delay: 0.2 }}
             className="lg:col-span-2"
           >
-            {mode === 'sign-to-text' ? (
-              <div className="space-y-6">
-                {/* ✅ FIXED */}
-<CameraFeed
-  onLandmarks={handleLandmarksDetected}
-  isActive={isCameraActive}
-  onToggle={() => setIsCameraActive(!isCameraActive)}
-/>
+{mode === 'sign-to-text' ? (
+  <div className="space-y-6 rounded-xl border bg-card p-4 shadow-sm">
+    <CameraFeed
+      onLandmarks={handleLandmarksDetected}
+      isActive={isCameraActive}
+      onToggle={() => setIsCameraActive(!isCameraActive)}
+    />
 
+    <div className="flex justify-end">
+      <button
+        onClick={clearAll}
+        className="px-4 py-2 rounded-md bg-destructive text-white text-sm hover:opacity-90"
+      >
+        Clear
+      </button>
+    </div>
 
-                <PredictionDisplay
-                  currentPrediction={currentPrediction}
-                  translatedText={translatedText}
-                  isDetecting={isCameraActive}
-                />
-              </div>
-            ) : (
+    <PredictionDisplay
+      currentPrediction={currentPrediction}
+      translatedText={translatedText}
+      isDetecting={isCameraActive}
+    />
+  </div>
+) : (
+
               <TextToSign
                 onTranslate={handleTextToSign}
                 isTranslating={isTranslating}
