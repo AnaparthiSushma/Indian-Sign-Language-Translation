@@ -6,17 +6,17 @@ from sklearn.preprocessing import LabelEncoder
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.utils import to_categorical
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.metrics import classification_report, confusion_matrix
 
 # ================= CONFIG =================
 DATA_DIR = "data/word_sequences"
-SEQUENCE_LENGTH = 15
+SEQUENCE_LENGTH = 20
 FEATURES = 126
 
 MODEL_PATH = "models/word_model.h5"
 LABEL_MAP_PATH = "models/word_label_map.json"
 
-EPOCHS = 40
+EPOCHS = 60
 BATCH_SIZE = 16
 # =========================================
 
@@ -25,7 +25,6 @@ os.makedirs("models", exist_ok=True)
 X = []
 y = []
 
-# Load data
 for word in os.listdir(DATA_DIR):
     word_path = os.path.join(DATA_DIR, word)
     if not os.path.isdir(word_path):
@@ -33,12 +32,9 @@ for word in os.listdir(DATA_DIR):
 
     for file in os.listdir(word_path):
         if file.endswith(".npy"):
-            path = os.path.join(word_path, file)
-            seq = np.load(path)
+            seq = np.load(os.path.join(word_path, file))
 
-            # Safety checks
             if seq.shape != (SEQUENCE_LENGTH, FEATURES):
-                print(f"⚠ Skipping {path}, wrong shape {seq.shape}")
                 continue
 
             X.append(seq)
@@ -48,11 +44,10 @@ X = np.array(X)
 y = np.array(y)
 
 if len(X) == 0:
-    raise ValueError("❌ No word data found. Collect data first.")
+    raise ValueError("No data found!")
 
-print("✅ Loaded:", X.shape, "Labels:", len(y))
+print("Loaded:", X.shape)
 
-# Encode labels
 le = LabelEncoder()
 y_enc = le.fit_transform(y)
 
@@ -62,7 +57,6 @@ with open(LABEL_MAP_PATH, "w") as f:
 
 y_cat = to_categorical(y_enc)
 
-# Train-test split
 X_train, X_test, y_train, y_test = train_test_split(
     X, y_cat,
     test_size=0.2,
@@ -73,10 +67,11 @@ X_train, X_test, y_train, y_test = train_test_split(
 # ================= MODEL =================
 model = Sequential([
     LSTM(128, return_sequences=True, input_shape=(SEQUENCE_LENGTH, FEATURES)),
-    Dropout(0.3),
+    Dropout(0.4),
     LSTM(64),
-    Dropout(0.3),
+    Dropout(0.4),
     Dense(64, activation="relu"),
+    Dropout(0.3),
     Dense(y_cat.shape[1], activation="softmax")
 ])
 
@@ -96,21 +91,10 @@ model.fit(
 model.save(MODEL_PATH)
 
 loss, acc = model.evaluate(X_test, y_test)
-print("\n✅ Word training done")
-print(f"🎯 Validation Accuracy: {acc*100:.2f}%")
-# ================= EVALUATION =================
+print(f"\n🎯 Validation Accuracy: {acc*100:.2f}%")
+
 y_true = np.argmax(y_test, axis=1)
 y_pred = np.argmax(model.predict(X_test), axis=1)
 
-print("\n📊 Classification Report (Word Model):")
-print(classification_report(
-    y_true,
-    y_pred,
-    target_names=le.classes_
-))
-
-print("🧩 Confusion Matrix:")
-print(confusion_matrix(y_true, y_pred))
-
-acc = accuracy_score(y_true, y_pred)
-print(f"🎯 Final Test Accuracy: {acc * 100:.2f}%")
+print("\n📊 Classification Report:")
+print(classification_report(y_true, y_pred, target_names=le.classes_))

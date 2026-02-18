@@ -6,7 +6,7 @@ import mediapipe as mp
 
 # ================= CONFIG =================
 DATA_DIR = "data/word_sequences"
-WORDS = ["HELLO", "YES", "NO", "THANKYOU", "PLEASE"]
+WORDS = ["HELLO", "YES", "NO", "THANKYOU", "PLEASE","BYE","FOOD","GOODMORNING","SORRY","WATER"]
 
 SEQUENCE_LENGTH = 30
 SAMPLES_PER_WORD = 60

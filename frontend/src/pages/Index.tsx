@@ -9,7 +9,14 @@ import TranslationHistory from '@/components/TranslationHistory';
 import TextToSign from '@/components/TextToSign';
 import ModeToggle from '@/components/ModeToggle';
 import StatsCard from '@/components/StatsCard';
+import AlphabetWordToggle from '@/components/AlphabetWordToggle';
 import { predictLandmarks } from "@/lib/mlApi";
+
+interface HandLandmark {
+  x: number;
+  y: number;
+  z: number;
+}
 
 interface Prediction {
   text: string;
@@ -58,6 +65,7 @@ const Index = () => {
 
   const handleLandmarksDetected = useCallback(
     async (flatLandmarks: number[] | null) => {
+      
       if (!flatLandmarks || flatLandmarks.length !== 126) return;
 
       frameCountRef.current++;
@@ -79,18 +87,27 @@ const Index = () => {
         if (result.label === lastCharRef.current) return;
         lastCharRef.current = result.label;
 
+        const isWord = result.label.length > 1;
+
         setCurrentPrediction({
           text: result.label,
           confidence: result.confidence,
-          type: 'letter',
+          type: isWord ? 'word' : 'letter',
           timestamp: new Date()
         });
 
-        setTranslatedText(prev => prev + result.label);
+        setTranslatedText(prev =>
+          isWord
+            ? prev + (prev ? " " : "") + result.label
+            : prev + result.label
+        );
 
         setStats(prev => ({
           ...prev,
-          signsDetected: prev.signsDetected + 1
+          signsDetected: prev.signsDetected + 1,
+          wordsTranslated: isWord
+            ? prev.wordsTranslated + 1
+            : prev.wordsTranslated
         }));
 
       } catch (err) {
@@ -155,6 +172,16 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
         <Header isConnected={isConnected} />
+
+        {/* Alphabet / Word Toggle */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mt-4"
+        >
+          <AlphabetWordToggle />
+        </motion.div>
 
         {/* MODE + STATS */}
         <motion.div

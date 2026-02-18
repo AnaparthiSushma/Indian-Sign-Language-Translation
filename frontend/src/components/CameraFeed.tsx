@@ -31,6 +31,7 @@ const CameraFeed = ({ isActive, onToggle, onLandmarks }: CameraFeedProps) => {
     const flat: number[] = [];
     hands.slice(0, 2).forEach(hand =>
       hand.forEach(lm => flat.push(lm.x, lm.y, lm.z))
+
     );
     while (flat.length < 126) flat.push(0);
     return flat.slice(0, 126);
@@ -53,7 +54,6 @@ const CameraFeed = ({ isActive, onToggle, onLandmarks }: CameraFeedProps) => {
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
-
     const hands: HandLandmark[][] = [];
 
     if (results.multiHandLandmarks) {
@@ -135,10 +135,12 @@ const CameraFeed = ({ isActive, onToggle, onLandmarks }: CameraFeedProps) => {
   return (
     <div className="camera-container bg-card aspect-video w-full relative">
       <video
-        ref={videoRef}
-        className={`absolute inset-0 w-full h-full object-cover ${
-          isActive ? "opacity-100" : "opacity-0"
-        }`}
+  ref={videoRef}
+  className={`absolute inset-0 w-full h-full object-cover ${
+    isActive ? "opacity-100" : "opacity-0"
+  }`}
+
+
         autoPlay
         muted
         playsInline
