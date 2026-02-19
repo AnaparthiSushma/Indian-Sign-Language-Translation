@@ -38,10 +38,13 @@ const Index = () => {
   const [isConnected] = useState(true);
   const [currentPrediction, setCurrentPrediction] = useState<Prediction | null>(null);
   const [translatedText, setTranslatedText] = useState<string>("");
+const wordCompletedRef = useRef(false);
+
 
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [textToSignInput, setTextToSignInput] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState(false);
+const [clearSignal, setClearSignal] = useState(0);
 
   const [stats, setStats] = useState({
     signsDetected: 0,
@@ -52,21 +55,33 @@ const Index = () => {
   const frameCountRef = useRef(0);
   const predictionQueueRef = useRef<string[]>([]);
   const lastCharRef = useRef<string>("");
-  const lastPredictionTimeRef = useRef<number>(Date.now());
+  const lastHandDetectedRef = useRef<number>(Date.now());
 
-  const clearAll = useCallback(() => {
-    setTranslatedText("");
-    setCurrentPrediction(null);
-    lastCharRef.current = "";
-    predictionQueueRef.current = [];
-    frameCountRef.current = 0;
-    console.log("🧹 Cleared all predictions");
-  }, []);
+
+const clearAll = useCallback(() => {
+  setTranslatedText("");
+  setCurrentPrediction(null);
+  lastCharRef.current = "";
+  predictionQueueRef.current = [];
+  lastHandDetectedRef.current = Date.now();
+  frameCountRef.current = 0;
+
+  setClearSignal(prev => prev + 1); // 🔥 trigger child reset
+
+  console.log("🧹 Cleared all predictions");
+}, []);
+
 
   const handleLandmarksDetected = useCallback(
     async (flatLandmarks: number[] | null) => {
-      
-      if (!flatLandmarks || flatLandmarks.length !== 126) return;
+
+      if (!flatLandmarks || flatLandmarks.length !== 126) {
+  return;
+}
+
+// ✅ Track when hand is present
+lastHandDetectedRef.current = Date.now();
+
 
       frameCountRef.current++;
       if (frameCountRef.current % 3 !== 0) return;
@@ -74,8 +89,6 @@ const Index = () => {
       try {
         const result = await predictLandmarks(flatLandmarks);
         if (!result || !result.label || result.confidence < 0.6) return;
-
-        lastPredictionTimeRef.current = Date.now();
 
         const queue = predictionQueueRef.current;
         queue.push(result.label);
@@ -101,14 +114,6 @@ const Index = () => {
             ? prev + (prev ? " " : "") + result.label
             : prev + result.label
         );
-const entry: HistoryEntry = {
-  id: Date.now().toString(),
-  text: result.label,
-  timestamp: new Date(),
-  mode: 'sign-to-text'
-};
-
-setHistory(prev => [entry, ...prev].slice(0, 50));
 
         setStats(prev => ({
           ...prev,
@@ -126,22 +131,23 @@ setHistory(prev => [entry, ...prev].slice(0, 50));
   );
 
   // Auto-space on pause
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      if (
-        isCameraActive &&
-        translatedText.length > 0 &&
-        now - lastPredictionTimeRef.current > 2000 &&
-        !translatedText.endsWith(" ")
-      ) {
-        setTranslatedText(prev => prev + " ");
-        lastCharRef.current = "";
-      }
-    }, 300);
+useEffect(() => {
+  const interval = setInterval(() => {
+    const now = Date.now();
 
-    return () => clearInterval(interval);
-  }, [isCameraActive, translatedText]);
+    if (
+      isCameraActive &&
+      translatedText.length > 0 &&
+      now - lastHandDetectedRef.current > 5000 &&
+      !translatedText.endsWith(" ")
+    ) {
+      lastCharRef.current = "";
+    }
+  }, 300);
+
+  return () => clearInterval(interval); // ✅ IMPORTANT
+}, [isCameraActive, translatedText]);
+
 
   const handleTextToSign = useCallback((text: string) => {
     setIsTranslating(true);
@@ -159,22 +165,51 @@ setHistory(prev => [entry, ...prev].slice(0, 50));
   }, []);
 
   const handleClearHistory = useCallback(() => setHistory([]), []);
+useEffect(() => {
+  const interval = setInterval(() => {
+    const now = Date.now();
 
-  useEffect(() => {
-    if (!isCameraActive && translatedText) {
+    const isPause =
+      now - lastHandDetectedRef.current > 5000;
+
+    if (
+      isCameraActive &&
+      translatedText.length > 0 &&
+      isPause &&
+      !wordCompletedRef.current // 🔥 IMPORTANT LOCK
+    ) {
+      const finalWord = translatedText.trim();
+
+      // ✅ Save FULL word
       const entry: HistoryEntry = {
         id: Date.now().toString(),
-        text: translatedText,
+        text: finalWord,
         timestamp: new Date(),
         mode: 'sign-to-text'
       };
+
       setHistory(prev => [entry, ...prev].slice(0, 50));
-      setTranslatedText("");
-      setCurrentPrediction(null);
+
+      // ✅ Add space only ONCE
+      setTranslatedText(prev => prev + " ");
+
+      // ✅ Reset for next word
       lastCharRef.current = "";
-      predictionQueueRef.current = [];
+      wordCompletedRef.current = true; // 🔥 LOCK
+
+      console.log("✅ Word completed:", finalWord);
     }
-  }, [isCameraActive, translatedText]);
+
+    // 🔥 RESET LOCK when hand comes back
+    if (now - lastHandDetectedRef.current < 1000) {
+      wordCompletedRef.current = false;
+    }
+
+  }, 300);
+
+  return () => clearInterval(interval);
+}, [isCameraActive, translatedText]);
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -237,12 +272,11 @@ setHistory(prev => [entry, ...prev].slice(0, 50));
                     Clear
                   </button>
                 </div>
-
-                <PredictionDisplay
-                  currentPrediction={currentPrediction}
-                  translatedText={translatedText}
-                  isDetecting={isCameraActive}
-                />
+<PredictionDisplay
+  currentPrediction={currentPrediction}
+  isDetecting={isCameraActive}
+  translatedText={translatedText} // ✅ REQUIRED
+/>
               </div>
             ) : (
               <TextToSign

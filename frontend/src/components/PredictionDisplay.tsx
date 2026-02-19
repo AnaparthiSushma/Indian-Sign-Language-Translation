@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hand, Sparkles, TrendingUp } from 'lucide-react';
+import { Hand, Sparkles } from 'lucide-react';
 
 interface Prediction {
   text: string;
@@ -12,6 +12,7 @@ interface Prediction {
 interface PredictionDisplayProps {
   currentPrediction: Prediction | null;
   isDetecting: boolean;
+  translatedText: string; // ✅ RECEIVE FULL SENTENCE
 }
 
 const LANGUAGES = [
@@ -29,17 +30,14 @@ const LANGUAGES = [
 
 const PredictionDisplay = ({
   currentPrediction,
-  isDetecting
+  isDetecting,
+  translatedText
 }: PredictionDisplayProps) => {
 
   const [targetLang, setTargetLang] = useState("hi");
-  const [translatedText, setTranslatedText] = useState("");
-// 🔥 Reset translation when prediction cleared
-useEffect(() => {
-  if (!currentPrediction) {
-    setTranslatedText("");
-  }
-}, [currentPrediction]);
+
+  // 🔥 IMPORTANT: separate state (avoid conflict with prop)
+  const [translatedOutput, setTranslatedOutput] = useState("");
 
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'bg-success';
@@ -47,14 +45,18 @@ useEffect(() => {
     return 'bg-destructive';
   };
 
-  // 🔥 Auto translate whenever new prediction comes
+  // 🔥 TRANSLATE FULL SENTENCE (NOT JUST CURRENT CHAR)
   useEffect(() => {
     const translateText = async () => {
-      if (!currentPrediction?.text) return;
+      if (!translatedText) {
+        setTranslatedOutput("");
+        return;
+      }
 
       try {
+        // If English selected → no API call
         if (targetLang === "en") {
-          setTranslatedText(currentPrediction.text);
+          setTranslatedOutput(translatedText);
           return;
         }
 
@@ -62,14 +64,14 @@ useEffect(() => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            text: currentPrediction.text,
+            text: translatedText,   // ✅ FULL SENTENCE
             source: "en",
             target: targetLang
           })
         });
 
         const data = await response.json();
-        setTranslatedText(data.translated_text);
+        setTranslatedOutput(data.translated_text);
 
       } catch (error) {
         console.error("Translation error:", error);
@@ -78,7 +80,7 @@ useEffect(() => {
 
     translateText();
 
-  }, [currentPrediction, targetLang]);
+  }, [translatedText, targetLang]);
 
   return (
     <div className="glass-panel-strong p-6 h-full flex flex-col">
@@ -96,7 +98,7 @@ useEffect(() => {
         </div>
       </div>
 
-      {/* 🔥 Language Selector */}
+      {/* Language Selector */}
       <div className="mb-4">
         <select
           value={targetLang}
@@ -111,10 +113,10 @@ useEffect(() => {
         </select>
       </div>
 
-      {/* Detected English */}
+      {/* Detected Current Gesture */}
       <div className="mb-6">
         <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-          Detected (English)
+          Current Detection
         </p>
 
         <AnimatePresence mode="wait">
@@ -155,20 +157,20 @@ useEffect(() => {
         </AnimatePresence>
       </div>
 
-      {/* 🔥 Translated Output */}
+      {/* 🔥 FULL SENTENCE TRANSLATION */}
       <div className="flex-1">
         <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
           Translation (English → {LANGUAGES.find(l => l.code === targetLang)?.label})
         </p>
 
         <div className="h-32 rounded-xl bg-secondary/50 p-4 overflow-y-auto">
-          {translatedText ? (
+          {translatedOutput ? (
             <motion.p
               className="text-lg font-medium leading-relaxed"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
             >
-              {translatedText}
+              {translatedOutput}
             </motion.p>
           ) : (
             <p className="text-muted-foreground italic">
