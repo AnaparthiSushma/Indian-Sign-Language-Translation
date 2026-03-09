@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Hand, Sparkles } from 'lucide-react';
+import { Hand, Sparkles, Volume2 } from 'lucide-react';
 
 interface Prediction {
   text: string;
@@ -39,6 +39,17 @@ const PredictionDisplay = ({
   // 🔥 IMPORTANT: separate state (avoid conflict with prop)
   const [translatedOutput, setTranslatedOutput] = useState("");
 
+  // 🔊 SPEECH FUNCTION
+  const speakText = () => {
+    if (!translatedOutput) return;
+
+    const speech = new SpeechSynthesisUtterance(translatedOutput);
+    speech.lang = targetLang;
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(speech);
+  };
+
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.8) return 'bg-success';
     if (confidence >= 0.5) return 'bg-warning';
@@ -64,7 +75,7 @@ const PredictionDisplay = ({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            text: translatedText,   // ✅ FULL SENTENCE
+            text: translatedText,
             source: "en",
             target: targetLang
           })
@@ -159,9 +170,19 @@ const PredictionDisplay = ({
 
       {/* 🔥 FULL SENTENCE TRANSLATION */}
       <div className="flex-1">
-        <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">
-          Translation (English → {LANGUAGES.find(l => l.code === targetLang)?.label})
-        </p>
+
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-xs uppercase tracking-wider text-muted-foreground">
+            Translation (English → {LANGUAGES.find(l => l.code === targetLang)?.label})
+          </p>
+
+          <button
+            onClick={speakText}
+            className="p-2 rounded-lg bg-primary/20 hover:bg-primary/30 transition"
+          >
+            <Volume2 className="w-4 h-4 text-primary" />
+          </button>
+        </div>
 
         <div className="h-32 rounded-xl bg-secondary/50 p-4 overflow-y-auto">
           {translatedOutput ? (

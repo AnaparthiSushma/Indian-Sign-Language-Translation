@@ -39,7 +39,7 @@ const Word = () => {
   const [stats, setStats] = useState({
     signsDetected: 0,
     wordsTranslated: 0,
-    accuracy: 0.92
+    accuracy: 0.97
   });
 
   // 🔥 REAL WORD BACKEND CALL
